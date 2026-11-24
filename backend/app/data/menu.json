@@ -1,0 +1,318 @@
+{
+  "restaurant": {
+    "name": "Sufra",
+    "currency": "SAR",
+    "spice_scale": "0 = none, 1 = mild, 2 = medium, 3 = hot",
+    "allergen_list": ["gluten", "dairy", "egg", "tree_nuts", "peanuts", "sesame", "fish", "shellfish", "soy"]
+  },
+  "categories": {
+    "breakfast": [
+      {
+        "id": "b01",
+        "name": "Shakshuka",
+        "description": "Eggs poached in a spiced tomato and pepper sauce, served with bread.",
+        "price": 32,
+        "vegetarian": true,
+        "vegan": false,
+        "spice_level": 2,
+        "ingredients": ["egg", "tomato", "bell pepper", "onion", "garlic", "cumin", "chili", "olive oil", "bread"],
+        "allergens": ["egg", "gluten"],
+        "tags": ["hot dish", "protein"]
+      },
+      {
+        "id": "b02",
+        "name": "Foul Medames",
+        "description": "Slow-cooked fava beans with lemon, garlic, cumin and olive oil.",
+        "price": 22,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 1,
+        "ingredients": ["fava beans", "lemon", "garlic", "cumin", "olive oil", "tomato", "parsley"],
+        "allergens": [],
+        "tags": ["traditional", "high fibre", "gluten free"]
+      },
+      {
+        "id": "b03",
+        "name": "Beef Mutabbaq",
+        "description": "Crispy folded pastry stuffed with minced beef, egg and leek.",
+        "price": 28,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 1,
+        "ingredients": ["wheat dough", "minced beef", "egg", "leek", "onion", "black pepper"],
+        "allergens": ["gluten", "egg"],
+        "tags": ["street food", "crispy"]
+      },
+      {
+        "id": "b04",
+        "name": "Cheese Manakish",
+        "description": "Flatbread baked with akkawi and mozzarella cheese.",
+        "price": 20,
+        "vegetarian": true,
+        "vegan": false,
+        "spice_level": 0,
+        "ingredients": ["wheat dough", "akkawi cheese", "mozzarella", "nigella seeds"],
+        "allergens": ["gluten", "dairy"],
+        "tags": ["baked", "kid friendly"]
+      },
+      {
+        "id": "b05",
+        "name": "Za'atar Manakish",
+        "description": "Flatbread baked with za'atar, sesame and olive oil.",
+        "price": 16,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 0,
+        "ingredients": ["wheat dough", "za'atar", "sesame seeds", "olive oil", "sumac"],
+        "allergens": ["gluten", "sesame"],
+        "tags": ["baked", "budget"]
+      },
+      {
+        "id": "b06",
+        "name": "Masoub",
+        "description": "Mashed bread and banana topped with cream, honey and pistachios.",
+        "price": 26,
+        "vegetarian": true,
+        "vegan": false,
+        "spice_level": 0,
+        "ingredients": ["wheat bread", "banana", "ghee", "cream", "honey", "pistachio"],
+        "allergens": ["gluten", "dairy", "tree_nuts"],
+        "tags": ["sweet", "traditional"]
+      }
+    ],
+    "lunch": [
+      {
+        "id": "l01",
+        "name": "Chicken Kabsa",
+        "description": "Spiced basmati rice with slow-cooked chicken, raisins and almonds.",
+        "price": 48,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 1,
+        "ingredients": ["chicken", "basmati rice", "tomato", "onion", "kabsa spice", "raisins", "almonds"],
+        "allergens": ["tree_nuts"],
+        "tags": ["signature", "rice", "gluten free"]
+      },
+      {
+        "id": "l02",
+        "name": "Lamb Mandi",
+        "description": "Tender lamb smoked over rice, served with spicy tomato salsa on the side.",
+        "price": 72,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 1,
+        "ingredients": ["lamb", "basmati rice", "mandi spice", "onion", "tomato salsa", "chili"],
+        "allergens": [],
+        "tags": ["signature", "rice", "gluten free", "sharing"]
+      },
+      {
+        "id": "l03",
+        "name": "Falafel Wrap",
+        "description": "Crispy falafel with tahini, pickles and salad in flatbread.",
+        "price": 24,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 1,
+        "ingredients": ["chickpeas", "fava beans", "herbs", "tahini", "pickles", "lettuce", "tomato", "flatbread"],
+        "allergens": ["gluten", "sesame"],
+        "tags": ["wrap", "budget", "quick"]
+      },
+      {
+        "id": "l04",
+        "name": "Chicken Shawarma Plate",
+        "description": "Marinated chicken shawarma with garlic toum, fries, pickles and bread.",
+        "price": 38,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 1,
+        "ingredients": ["chicken", "garlic", "yogurt marinade", "toum", "fries", "pickles", "flatbread"],
+        "allergens": ["gluten", "dairy"],
+        "tags": ["grill", "protein"]
+      },
+      {
+        "id": "l05",
+        "name": "Fattoush Salad",
+        "description": "Crisp vegetables, herbs and toasted bread with pomegranate molasses dressing.",
+        "price": 22,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 0,
+        "ingredients": ["lettuce", "tomato", "cucumber", "radish", "mint", "sumac", "toasted bread", "pomegranate molasses", "olive oil"],
+        "allergens": ["gluten"],
+        "tags": ["light", "salad"]
+      },
+      {
+        "id": "l06",
+        "name": "Spicy Shrimp Sayadieh",
+        "description": "Caramelised onion rice with shrimp in a hot Jazan-style chili sauce.",
+        "price": 64,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 3,
+        "ingredients": ["shrimp", "rice", "caramelised onion", "red chili", "garlic", "cumin"],
+        "allergens": ["shellfish"],
+        "tags": ["seafood", "rice", "gluten free"]
+      }
+    ],
+    "dinner": [
+      {
+        "id": "d01",
+        "name": "Grilled Hammour",
+        "description": "Gulf hammour fillet grilled with lemon and herbs, served with saffron rice.",
+        "price": 78,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 0,
+        "ingredients": ["hammour fish", "lemon", "garlic", "parsley", "saffron rice", "olive oil"],
+        "allergens": ["fish"],
+        "tags": ["seafood", "grill", "gluten free", "light"]
+      },
+      {
+        "id": "d02",
+        "name": "Spicy Lamb Kofta",
+        "description": "Chargrilled lamb kofta with chili, served with tahini sauce and bread.",
+        "price": 56,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 2,
+        "ingredients": ["minced lamb", "onion", "parsley", "chili", "seven spice", "tahini", "flatbread"],
+        "allergens": ["gluten", "sesame"],
+        "tags": ["grill", "protein"]
+      },
+      {
+        "id": "d03",
+        "name": "Chicken Saleeg",
+        "description": "Creamy Hejazi rice cooked in chicken broth and milk, topped with roast chicken.",
+        "price": 52,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 0,
+        "ingredients": ["chicken", "short grain rice", "milk", "butter", "cardamom", "chicken broth"],
+        "allergens": ["dairy"],
+        "tags": ["comfort food", "traditional", "gluten free"]
+      },
+      {
+        "id": "d04",
+        "name": "Vegetable Maqluba",
+        "description": "Upside-down rice layered with fried aubergine, cauliflower and potato.",
+        "price": 42,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 1,
+        "ingredients": ["rice", "aubergine", "cauliflower", "potato", "tomato", "baharat", "vegetable oil"],
+        "allergens": [],
+        "tags": ["rice", "gluten free", "sharing"]
+      },
+      {
+        "id": "d05",
+        "name": "Hot Chicken Haneeth",
+        "description": "Slow-roasted chicken rubbed with a fiery southern chili paste, served with rice.",
+        "price": 54,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 3,
+        "ingredients": ["chicken", "red chili paste", "garlic", "black lime", "rice"],
+        "allergens": [],
+        "tags": ["very spicy", "rice", "gluten free"]
+      },
+      {
+        "id": "d06",
+        "name": "Paneer Tikka Masala",
+        "description": "Grilled paneer in a spiced tomato and cream sauce, with rice and naan.",
+        "price": 46,
+        "vegetarian": true,
+        "vegan": false,
+        "spice_level": 2,
+        "ingredients": ["paneer", "tomato", "cream", "cashew", "garam masala", "chili", "rice", "naan"],
+        "allergens": ["dairy", "tree_nuts", "gluten"],
+        "tags": ["curry", "protein"]
+      }
+    ],
+    "snacks": [
+      {
+        "id": "s01",
+        "name": "Hummus with Bread",
+        "description": "Creamy chickpea and tahini dip with olive oil and warm bread.",
+        "price": 18,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 0,
+        "ingredients": ["chickpeas", "tahini", "lemon", "garlic", "olive oil", "flatbread"],
+        "allergens": ["sesame", "gluten"],
+        "tags": ["dip", "sharing", "budget"]
+      },
+      {
+        "id": "s02",
+        "name": "Vegetable Sambousek",
+        "description": "Four crispy pastries filled with spiced potato and peas.",
+        "price": 16,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 2,
+        "ingredients": ["wheat pastry", "potato", "peas", "onion", "green chili", "cumin"],
+        "allergens": ["gluten"],
+        "tags": ["fried", "budget", "ramadan favourite"]
+      },
+      {
+        "id": "s03",
+        "name": "Cheese Sambousek",
+        "description": "Four crispy pastries filled with white cheese and parsley.",
+        "price": 18,
+        "vegetarian": true,
+        "vegan": false,
+        "spice_level": 0,
+        "ingredients": ["wheat pastry", "white cheese", "parsley"],
+        "allergens": ["gluten", "dairy"],
+        "tags": ["fried", "kid friendly"]
+      },
+      {
+        "id": "s04",
+        "name": "Luqaimat",
+        "description": "Golden fried dough balls drizzled with date syrup and sesame.",
+        "price": 15,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 0,
+        "ingredients": ["wheat flour", "yeast", "saffron", "date syrup", "sesame seeds"],
+        "allergens": ["gluten", "sesame"],
+        "tags": ["sweet", "dessert", "budget"]
+      },
+      {
+        "id": "s05",
+        "name": "Kunafa",
+        "description": "Warm shredded pastry layered with cheese, soaked in syrup and topped with pistachio.",
+        "price": 28,
+        "vegetarian": true,
+        "vegan": false,
+        "spice_level": 0,
+        "ingredients": ["kataifi pastry", "akkawi cheese", "butter", "sugar syrup", "pistachio"],
+        "allergens": ["gluten", "dairy", "tree_nuts"],
+        "tags": ["sweet", "dessert"]
+      },
+      {
+        "id": "s06",
+        "name": "Dates and Saudi Coffee",
+        "description": "Selection of Sukkari dates with a pot of cardamom gahwa.",
+        "price": 14,
+        "vegetarian": true,
+        "vegan": true,
+        "spice_level": 0,
+        "ingredients": ["sukkari dates", "arabic coffee", "cardamom", "saffron"],
+        "allergens": [],
+        "tags": ["sweet", "traditional", "gluten free", "budget"]
+      },
+      {
+        "id": "s07",
+        "name": "Peanut Chili Chicken Bites",
+        "description": "Crispy chicken bites tossed in a sweet chili and crushed peanut glaze.",
+        "price": 26,
+        "vegetarian": false,
+        "vegan": false,
+        "spice_level": 2,
+        "ingredients": ["chicken", "cornflour", "sweet chili sauce", "soy sauce", "peanuts", "spring onion"],
+        "allergens": ["peanuts", "soy"],
+        "tags": ["fried", "protein", "sharing"]
+      }
+    ]
+  }
+}

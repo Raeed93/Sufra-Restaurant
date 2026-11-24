@@ -1,0 +1,21 @@
+# Day 1: just Postgres for local development.
+# The backend runs on your machine with `python cli.py`.
+# Day 2 adds the backend, frontend and nginx services.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: foodics
+      POSTGRES_PASSWORD: foodics
+      POSTGRES_DB: foodics
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodics"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
