@@ -50,6 +50,21 @@ def test_users_are_isolated(db):
         memory.remove_preference(db, bob.id, pref.id)
     assert len(memory.active_preferences(db, alice.id)) == 1
 
+def test_saving_second_spice_replaces_the_first(db):
+    user, _ = memory.get_or_create_user(db, "a")
+    memory.save_preference(db, user.id, "spice", "1")
+    memory.save_preference(db, user.id, "spice", "3")   # model used save, not update
+    active = memory.active_preferences(db, user.id)
+    assert [(p.kind.value, p.value) for p in active] == [("spice", "3")]
+
+
+def test_allergy_must_be_a_known_allergen(db):
+    user, _ = memory.get_or_create_user(db, "a")
+    with pytest.raises(ValueError):
+        memory.save_preference(db, user.id, "allergy", "nuts")
+    memory.save_preference(db, user.id, "allergy", "peanuts")
+    memory.save_preference(db, user.id, "allergy", "tree_nuts")
+    assert len(memory.active_preferences(db, user.id)) == 2 
 
 def test_unknown_kind_is_rejected(db):
     user, _ = memory.get_or_create_user(db, "a")

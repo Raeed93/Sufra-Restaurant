@@ -6,6 +6,7 @@ or change another user's preferences (the same IDOR lesson as PulseMD).
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import menu
 from app.models import Preference, PreferenceKind, User, utcnow
 
 
@@ -30,15 +31,34 @@ def active_preferences(db: Session, user_id: int) -> list[Preference]:
     return list(db.scalars(stmt))
 
 
+# A user has only one spice level and one budget at a time. 
+# Saving a new one replaces the old one 
+SINGLE_VALUE_KINDS = {PreferenceKind.spice, PreferenceKind.budget}
+
+
 def save_preference(
     db: Session, user_id: int, kind: str, value: str, source_text: str | None = None
 ) -> Preference:
-    """Add a preference. Skips exact duplicates of an active preference."""
+    """Add a preference.
+
+    - Exact duplicates of an active preference are skipped.
+    - Allergies must be a known allergen code, so they can be enforced as filters.
+    - For single-value kinds (spice, budget), an existing value is replaced.
+    """
     kind_enum = PreferenceKind(kind)  # raises ValueError on an unknown kind
     value = value.strip().lower()
+    if kind_enum == PreferenceKind.allergy and value not in menu.known_allergens():
+        raise ValueError(
+            f"allergy must be one of {menu.known_allergens()}; "
+            "save one row per allergen (e.g. 'nuts' = tree_nuts and peanuts)"
+        )
     for existing in active_preferences(db, user_id):
-        if existing.kind == kind_enum and existing.value == value:
+        if existing.kind != kind_enum:
+            continue
+        if existing.value == value:
             return existing
+        if kind_enum in SINGLE_VALUE_KINDS:
+            return update_preference(db, user_id, existing.id, value, source_text=source_text)
     pref = Preference(user_id=user_id, kind=kind_enum, value=value, source_text=source_text)
     db.add(pref)
     db.commit()

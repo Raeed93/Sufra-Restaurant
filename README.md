@@ -1,4 +1,4 @@
-# Bait Al Qahwa — AI Ordering Assistant
+# Sufra — AI Ordering Assistant
 
 A conversational agent that recommends dishes from a restaurant menu and remembers each
 user's preferences across conversations. Built for the Foodics AI Engineer take-home.

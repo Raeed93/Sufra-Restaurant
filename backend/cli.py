@@ -10,6 +10,7 @@ Commands while chatting:
     /quit    exit
 """
 import argparse
+import time
 
 from app import memory
 from app.agent import AgentError, run_turn
@@ -43,17 +44,21 @@ def main() -> None:
                 print(memory.format_for_prompt(memory.active_preferences(db, user.id)), "\n")
                 continue
 
+            start = time.perf_counter()
             try:
                 result = run_turn(db, user, history, text)
             except AgentError as exc:
                 print(f"[error] {exc}\n")
                 continue
+            elapsed = time.perf_counter() - start
 
             if args.debug:
                 for call in result.tool_calls:
                     print(f"  [tool] {call['name']}({call['arguments']})")
                     print(f"         -> {call['output'][:200]}")
             print(f"agent > {result.reply}\n")
+            if args.debug:
+                print(f"  [{elapsed:.1f}s, {len(result.tool_calls)} tool calls]\n")
     finally:
         db.close()
 

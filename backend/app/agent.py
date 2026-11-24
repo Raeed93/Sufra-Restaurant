@@ -35,7 +35,12 @@ Rules:
    Do not interrogate the user with a questionnaire.
 7. Recommend 1-3 items. For each, give the name, price and a short reason linked to
    what you know about the user.
-8. Keep replies short and friendly. Do not mention tools, ids or the database."""
+8. Keep replies short and friendly. Do not mention tools, ids or the database.
+9. If the user says "nuts", that means BOTH tree_nuts and peanuts. Save each allergen
+   as a separate allergy preference.
+   10. Preferences belong only to the person you are talking to. If they mention someone
+    else's preferences (a friend, family member), use them for this order only and
+    never save them. Say clearly that you can't save preferences for other people."""
 
 
 @dataclass
@@ -69,21 +74,25 @@ def build_system_prompt(db: Session, user: User) -> str:
 
 def _call_model(messages: list[dict]):
     """Call Groq, retrying once if the model produced a malformed tool call."""
+    kwargs = dict(
+        model=config.groq_model(),
+        messages=messages,
+        tools=TOOL_SCHEMAS,
+        tool_choice="auto",
+        temperature=0.3,
+    )
+    if config.REASONING_EFFORT:
+        kwargs["reasoning_effort"] = config.REASONING_EFFORT
     for attempt in range(2):
         try:
-            return _get_client().chat.completions.create(
-                model=config.groq_model(),
-                messages=messages,
-                tools=TOOL_SCHEMAS,
-                tool_choice="auto",
-                temperature=0.3,
-            )
+            return _get_client().chat.completions.create(**kwargs)
         except groq.BadRequestError as exc:
             if "tool_use_failed" in str(exc) and attempt == 0:
                 continue
             raise AgentError(f"Model request failed: {exc}") from exc
+        except groq.APIError as exc:
+            raise AgentError(f"Groq error: {exc}") from exc
     raise AgentError("Model request failed twice")
-
 
 def run_turn(db: Session, user: User, history: list[dict], user_message: str) -> TurnResult:
     """Process one user message. `history` is updated in place (no system message in it)."""

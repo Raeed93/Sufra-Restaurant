@@ -19,7 +19,7 @@ def _required(name: str) -> str:
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg://foodics:foodics@localhost:5432/foodics",
+    "postgresql+psycopg://foodics:foodics@localhost:5442/foodics",
 )
 
 
@@ -34,3 +34,6 @@ def groq_model() -> str:
 # Safety cap on tool-call rounds per user message, so a confused model
 # can't loop forever and burn tokens.
 MAX_AGENT_STEPS = int(os.getenv("MAX_AGENT_STEPS", "6"))
+
+# Only sent when set: gpt-oss accepts low/medium/high; some other models don't support it.
+REASONING_EFFORT = os.getenv("REASONING_EFFORT") or None
