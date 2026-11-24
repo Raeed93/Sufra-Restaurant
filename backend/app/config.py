@@ -37,3 +37,17 @@ MAX_AGENT_STEPS = int(os.getenv("MAX_AGENT_STEPS", "6"))
 
 # Only sent when set: gpt-oss accepts low/medium/high; some other models don't support it.
 REASONING_EFFORT = os.getenv("REASONING_EFFORT") or None
+
+# --- Auth (Day 2) ---
+def jwt_secret() -> str:
+    secret = _required("JWT_SECRET")
+    if len(secret) < 32:
+        raise RuntimeError("JWT_SECRET must be at least 32 characters")
+    return secret
+
+
+JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "168"))  # 7 days
+# True in production (HTTPS only). False locally because localhost is plain HTTP.
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+# Only the most recent messages of a conversation are sent to the model.
+MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "40"))

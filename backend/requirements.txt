@@ -4,4 +4,8 @@ sqlalchemy==2.0.*
 psycopg[binary]==3.2.*
 groq>=0.13
 python-dotenv==1.0.*
+bcrypt==4.*
+pyjwt==2.*
+# tests
 pytest==8.*
+httpx==0.28.*

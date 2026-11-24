@@ -12,8 +12,17 @@ engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 
+def get_db():
+    """FastAPI dependency: one session per request, always closed."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 def init_db() -> None:
-    """Create tables if they don't exist. Fine for a take-home; use Alembic in production."""
+    """Create tables if they don't exist, use Alembic in production."""
     from app import models  # noqa: F401  (registers the tables on Base)
 
     Base.metadata.create_all(engine)
