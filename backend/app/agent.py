@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import config, memory, menu, safety
 from app.models import User
-from app.tools import ToolContext, run_tool, tool_schemas
+from app.tools import ToolContext, recommendation_card, run_tool, tool_schemas
 
 log = logging.getLogger("sufra.agent")
 
@@ -61,8 +61,8 @@ Rules:
 
 # Replaces rule 7 when the safety layer is on.
 SAFETY_RULES = """
-11. To recommend dishes, call the recommend tool with item ids from search_menu and a
-    short reason for each. The app shows each accepted dish as a card with its name,
+11. To recommend dishes, ALWAYS call the recommend tool with item ids from search_menu
+    and a short reason for each, even for one dish. The app shows each accepted dish as a card with its name,
     price and allergens. In your text, write one or two friendly sentences; you may
     refer to dishes by their menu names but do not write prices. If an item is
     rejected, pick another one or say honestly that nothing on the menu fits.
@@ -227,6 +227,24 @@ def _allergy_safety_net(db: Session, user: User, message: str, result: TurnResul
         log.info("user=%s %s", user.id, event)
 
 
+def _cards_from_text(db: Session, user: User, reply: str) -> list[dict]:
+    """Cards for menu dishes the model wrote in its text instead of calling recommend.
+
+    Seen in production: the model sometimes skips the recommend tool. The reply
+    check has already passed, so these are real dishes; each is checked again and
+    its card is built from menu.json, exactly like a recommend call.
+    """
+    prefs = memory.active_preferences(db, user.id)
+    cards, seen = [], set()
+    for d in safety.dish_mentions(reply):
+        item = d["item"]
+        if item is None or item["id"] in seen or safety.check_item(item, prefs):
+            continue
+        seen.add(item["id"])
+        cards.append(recommendation_card(item, ""))
+    return cards[:3]
+
+
 def _check_reply(db: Session, user: User, history: list[dict], system_prompt: str, reply: str,
                  result: TurnResult) -> str:
     """Make sure the final text doesn't name invented dishes, wrong prices or unsafe dishes."""
@@ -275,6 +293,8 @@ def run_turn(db: Session, user: User, history: list[dict], user_message: str) ->
             if safety_on():
                 result.recommendations = ctx.recommendations
                 reply = _check_reply(db, user, history, system_prompt, reply, result)
+                if not result.recommendations:
+                    result.recommendations = _cards_from_text(db, user, reply)
             result.reply = reply
             history.append({"role": "assistant", "content": reply})
             return result

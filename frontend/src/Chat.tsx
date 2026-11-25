@@ -46,7 +46,7 @@ function DishCard({ r }: { r: Recommendation }) {
         <span className="dish-name">{r.name}</span>
         <span className="dish-price">{r.price} SAR</span>
       </div>
-      <p className="dish-reason">{r.reason}</p>
+      {r.reason && <p className="dish-reason">{r.reason}</p>}
       <p className="dish-facts">
         <span>{r.category[0].toUpperCase() + r.category.slice(1)}</span>
         <span>{SPICE_WORDS[r.spice_level] ?? `Spice ${r.spice_level}`}</span>

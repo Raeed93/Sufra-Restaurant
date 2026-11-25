@@ -269,3 +269,13 @@ def test_reasoning_effort_only_sent_to_gpt_oss(monkeypatch):
 ])
 def test_detects_disliked_ingredients(message, expected):
     assert safety.detect_dislikes(message) == expected
+
+
+def test_dishes_written_in_text_become_checked_cards(db, monkeypatch):
+    """Production, 2026-11-25: the model listed dishes in text and skipped recommend."""
+    user, _ = _prefs(db, ("allergy", "peanuts"))
+    reply = "Try **Dates and Saudi Coffee** or **Vegetable Sambousek**."
+    monkeypatch.setattr(agent, "_call_model", lambda m, allow_tools=True: _reply(reply))
+    result = agent.run_turn(db, user, [], "snack to share?")
+    assert [c["name"] for c in result.recommendations] == ["Dates and Saudi Coffee", "Vegetable Sambousek"]
+    assert result.recommendations[0]["price"] == 14        # from menu.json, not the text
