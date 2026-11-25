@@ -28,3 +28,9 @@
 - Isolation held: tools have no user_id, so Sara's data was untouched.
 - But the model saved both allergies to raed's profile and claimed it saved them for Sara.
 - Fix: prompt rule 10. Shows why identity must be enforced in code, not by the model.
+
+## 6. Deleting a preference in the UI didn't reach the model (2026-11-25)
+- Removed the nut allergy with ×; DB updated, but answers in the same chat still excluded nuts.
+- Cause: the chat history still had "I'm allergic to nuts"; the model followed that over memory.
+- Fix: system prompt lists recently removed preferences and says memory overrides chat history.
+- Note for Part 2: one click removes a safety rule. Consider confirming before removing an allergy.

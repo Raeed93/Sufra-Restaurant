@@ -79,3 +79,13 @@ def test_tool_errors_go_back_to_the_model(db):
     assert "error" in out
     out = json.loads(run_tool(ctx, "search_menu", '{"category": "snacks", "vegan": true}'))
     assert out["count"] > 0 and all(i["vegan"] for i in out["items"])
+def test_recently_removed_lists_deleted_but_not_replaced_or_readded(db):
+    user, _ = memory.get_or_create_user(db, "a")
+    nuts = memory.save_preference(db, user.id, "allergy", "tree_nuts")
+    spice = memory.save_preference(db, user.id, "spice", "1")
+    memory.update_preference(db, user.id, spice.id, "3")      # replaced: not "removed"
+    memory.remove_preference(db, user.id, nuts.id)
+    assert [p.value for p in memory.recently_removed(db, user.id)] == ["tree_nuts"]
+
+    memory.save_preference(db, user.id, "allergy", "tree_nuts")   # re-added
+    assert memory.recently_removed(db, user.id) == []

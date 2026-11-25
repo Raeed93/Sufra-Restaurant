@@ -111,3 +111,35 @@ def format_for_prompt(prefs: list[Preference]) -> str:
     if not prefs:
         return "(nothing remembered yet)"
     return "\n".join(f"- [id={p.id}] {p.kind.value}: {p.value}" for p in prefs)
+
+def recently_removed(db: Session, user_id: int, limit: int = 10) -> list[Preference]:
+    """Preferences the user removed (not replaced) and hasn't re-added since.
+
+    The model needs this list: the chat history may still contain the user
+    saying "I'm allergic to nuts", and without being told otherwise the model
+    keeps acting on it after the user deleted it.
+    """
+    stmt = (
+        select(Preference)
+        .where(
+            Preference.user_id == user_id,
+            Preference.superseded_at.is_not(None),
+            Preference.superseded_by_id.is_(None),
+        )
+        .order_by(Preference.superseded_at.desc())
+        .limit(limit)
+    )
+    active = {(p.kind, p.value) for p in active_preferences(db, user_id)}
+    seen, out = set(), []
+    for p in db.scalars(stmt):
+        key = (p.kind, p.value)
+        if key not in active and key not in seen:
+            seen.add(key)
+            out.append(p)
+    return out
+
+
+def format_removed(prefs: list[Preference]) -> str:
+    if not prefs:
+        return "(none)"
+    return "\n".join(f"- {p.kind.value}: {p.value}" for p in prefs)

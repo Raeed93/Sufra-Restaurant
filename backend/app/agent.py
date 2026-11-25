@@ -23,6 +23,12 @@ You help {name} decide what to order. Prices are in SAR.
 What you remember about this user (from earlier conversations):
 {preferences}
 
+Removed by the user (no longer applies, even if mentioned earlier in this chat):
+{removed}
+
+This memory is the source of truth. If something said earlier in the chat
+contradicts it, follow the memory: the user may have edited it since.
+
 Rules:
 1. Only recommend items returned by search_menu. Never invent dishes, ingredients or prices.
 2. Allergies are strict. Always pass every remembered allergy in exclude_allergens.
@@ -69,6 +75,7 @@ def build_system_prompt(db: Session, user: User) -> str:
         restaurant=menu.load_menu()["restaurant"]["name"],
         name=user.display_name or user.username,
         preferences=memory.format_for_prompt(prefs),
+        removed=memory.format_removed(memory.recently_removed(db, user.id)),
     )
 
 

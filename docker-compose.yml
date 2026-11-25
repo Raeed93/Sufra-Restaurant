@@ -17,5 +17,11 @@ services:
       interval: 5s
       retries: 10
 
+  adminer:
+    image: adminer:latest
+    ports:
+      - "127.0.0.1:8191:8080"
+    depends_on:
+      - db
 volumes:
   pgdata:
