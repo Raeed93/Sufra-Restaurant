@@ -154,3 +154,118 @@ def test_model_cannot_save_someone_elses_allergy(db):
     out = json.loads(run_tool(ctx, "save_preference", '{"kind": "allergy", "value": "soy"}'))
     assert "someone else" in out["error"]
     assert memory.active_preferences(db, user.id) == []
+
+
+@pytest.mark.parametrize("message, expected", [
+    ("I'm vegan, any dinner ideas?", "vegan"),
+    ("I am vegetarian.", "vegetarian"),
+    ("I don't eat meat", "vegetarian"),
+    ("I'm not vegetarian anymore", None),
+    ("my wife is vegan", None),
+    ("Is the maqluba vegan?", None),
+])
+def test_detects_the_users_diet(message, expected):
+    assert safety.detect_diet(message) == expected
+
+
+def test_null_tool_arguments_are_accepted(db):
+    """Finding 7: the model sends null for unused filters."""
+    from app.tools import TOOL_SCHEMAS
+    props = TOOL_SCHEMAS[0]["function"]["parameters"]["properties"]
+    assert props["max_price"]["type"] == ["number", "null"]
+    assert None in props["category"]["enum"]
+    user, _ = memory.get_or_create_user(db, "u")
+    ctx = ToolContext(db=db, user_id=user.id, last_user_message="x")
+    out = json.loads(run_tool(ctx, "search_menu", json.dumps(
+        {"category": "dinner", "vegan": True, "max_price": None, "query": None, "max_spice": None})))
+    assert out["count"] == 1
+
+
+def test_bracketed_notes_are_not_invented_dishes():
+    assert safety.find_invented_dishes("**Falafel Wrap (vegetarian)** – 24 SAR") == []
+
+
+# ---------- Fallback model ----------
+
+class _FakeCompletions:
+    def __init__(self, fail_models):
+        self.fail_models = fail_models
+        self.models_called = []
+
+    def create(self, **kwargs):
+        import groq
+        import httpx
+        self.models_called.append(kwargs["model"])
+        if kwargs["model"] in self.fail_models:
+            response = httpx.Response(429, request=httpx.Request("POST", "https://api.groq.com"))
+            raise groq.RateLimitError("tokens per day", response=response, body=None)
+        return NS(model=kwargs["model"], choices=[NS(message=NS(content="Hello!", tool_calls=None))])
+
+
+def _fake_client(monkeypatch, fail_models):
+    completions = _FakeCompletions(fail_models)
+    monkeypatch.setattr(agent, "_get_client", lambda: NS(chat=NS(completions=completions)))
+    return completions
+
+
+def test_rate_limited_main_model_falls_back_and_says_so(db, monkeypatch):
+    monkeypatch.setattr(agent.config, "GROQ_FALLBACK_MODEL", "backup-model")
+    fake = _fake_client(monkeypatch, fail_models={"fake-model"})
+    user, _ = memory.get_or_create_user(db, "u")
+    result = agent.run_turn(db, user, [], "hi")
+    assert fake.models_called == ["fake-model", "backup-model"]
+    assert result.reply == "Hello!"
+    assert agent.FALLBACK_EVENT in result.safety_events
+
+
+def test_no_fallback_configured_fails_loudly(db, monkeypatch):
+    monkeypatch.setattr(agent.config, "GROQ_FALLBACK_MODEL", None)
+    _fake_client(monkeypatch, fail_models={"fake-model"})
+    user, _ = memory.get_or_create_user(db, "u")
+    with pytest.raises(agent.AgentError):
+        agent.run_turn(db, user, [], "hi")
+
+
+def test_unparseable_output_is_retried_once(db, monkeypatch):
+    """Eval run 3: Groq returned output_parse_failed; one retry should recover."""
+    import groq
+    import httpx
+    calls = []
+
+    class Flaky:
+        def create(self, **kwargs):
+            calls.append(kwargs)
+            if len(calls) == 1:
+                response = httpx.Response(400, request=httpx.Request("POST", "https://api.groq.com"))
+                raise groq.BadRequestError("output_parse_failed", response=response, body=None)
+            return NS(model=kwargs["model"], choices=[NS(message=NS(content="Hi", tool_calls=None))])
+
+    monkeypatch.setattr(agent, "_get_client", lambda: NS(chat=NS(completions=Flaky())))
+    user, _ = memory.get_or_create_user(db, "u")
+    assert agent.run_turn(db, user, [], "hello").reply == "Hi"
+    assert len(calls) == 2
+
+
+def test_reasoning_effort_only_sent_to_gpt_oss(monkeypatch):
+    sent = []
+    monkeypatch.setattr(agent.config, "REASONING_EFFORT", "low")
+    monkeypatch.setattr(agent, "_get_client", lambda: NS(chat=NS(completions=NS(
+        create=lambda **kw: sent.append(kw) or NS(model=kw["model"], choices=[])))))
+    monkeypatch.setenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+    agent._call_model([])
+    monkeypatch.setenv("GROQ_MODEL", "openai/gpt-oss-120b")
+    agent._call_model([])
+    assert "reasoning_effort" not in sent[0]
+    assert sent[1]["reasoning_effort"] == "low"
+
+
+@pytest.mark.parametrize("message, expected", [
+    ("I don't like chicken. Dinner ideas?", ["chicken"]),      # eval run 3
+    ("I hate eggs", ["egg"]),
+    ("I really don't eat lamb", ["lamb"]),
+    ("I don't like very spicy food", []),                       # not an ingredient
+    ("I don't eat meat", []),                                   # a diet, handled separately
+    ("my son doesn't like chicken", []),
+])
+def test_detects_disliked_ingredients(message, expected):
+    assert safety.detect_dislikes(message) == expected

@@ -142,6 +142,28 @@ def tool_schemas(safety_on: bool) -> list[dict]:
     return [*TOOL_SCHEMAS, RECOMMEND_SCHEMA] if safety_on else TOOL_SCHEMAS
 
 
+def _allow_null(schema: dict) -> dict:
+    """Let optional parameters be null.
+
+    gpt-oss often sends {"max_price": null} for filters it isn't using. Groq
+    validates tool arguments against the schema and rejected those calls, which
+    crashed ~1 in 4 turns in the first eval run (finding 7). Our code already
+    ignores None, so accepting null is the real fix, not a retry.
+    """
+    params = schema["function"]["parameters"]
+    required = set(params.get("required", []))
+    for name, prop in params.get("properties", {}).items():
+        if name in required or "type" not in prop:
+            continue
+        prop["type"] = [prop["type"], "null"] if isinstance(prop["type"], str) else prop["type"]
+        if "enum" in prop and None not in prop["enum"]:
+            prop["enum"] = [*prop["enum"], None]
+    return schema
+
+
+TOOL_SCHEMAS = [_allow_null(s) for s in TOOL_SCHEMAS]
+
+
 @dataclass
 class ToolContext:
     db: Session
@@ -198,7 +220,7 @@ def run_tool(ctx: ToolContext, name: str, raw_args: str) -> str:
 
     try:
         if name == "search_menu":
-            items = menu.search_menu(**args)
+            items = menu.search_menu(**{k: v for k, v in args.items() if v is not None})
             return json.dumps({"count": len(items), "items": [_item_summary(i) for i in items]})
 
         if name == "save_preference":

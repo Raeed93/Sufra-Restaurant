@@ -277,7 +277,7 @@ export default function Chat({ user, prefs, setPrefs, onLogout }: Props) {
               {m.safetyEvents && m.safetyEvents.length > 0 && (
                 <ul className="safety-events" aria-label="Safety checks">
                   {m.safetyEvents.map((e, j) => (
-                    <li key={j} className={e.startsWith("Safety net") ? undefined : "alert"}>
+                    <li key={j} className={e.startsWith("Safety net") || e.startsWith("Backup model") ? undefined : "alert"}>
                       {e}
                     </li>
                   ))}

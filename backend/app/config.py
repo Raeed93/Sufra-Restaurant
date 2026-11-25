@@ -56,3 +56,7 @@ MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "40"))
 # "on":  recommend tool + code checks (allergy net, item checks, reply check).
 # "off": the Part 1 baseline, model-only. Kept so the evals can compare both.
 SAFETY_MODE = os.getenv("SAFETY_MODE", "on").lower()
+
+# Used when the main model hits a rate limit (e.g. Groq's free daily token cap).
+# Limits are per model, so a second model keeps the app answering. Leave empty to disable.
+GROQ_FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL") or None

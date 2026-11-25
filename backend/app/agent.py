@@ -1,7 +1,7 @@
 """The agent loop.
 
 One call to run_turn handles one user message:
-  1. (safety on) Allergy safety net: save allergens the user just mentioned.
+  1. (safety on) Safety net: save allergens, a diet or disliked ingredients just mentioned.
   2. Build the system prompt with the user's CURRENT active preferences.
   3. Ask the model. If it requests tools, run them and feed back the results.
   4. Repeat until the model replies with plain text (or the step cap is hit).
@@ -100,8 +100,9 @@ _client: groq.Groq | None = None
 def _get_client() -> groq.Groq:
     global _client
     if _client is None:
-        # Retries 429 rate limits and 5xx errors with backoff.
-        _client = groq.Groq(api_key=config.groq_api_key(), max_retries=4)
+        # Retries short rate limits and 5xx errors with backoff. Kept low: a daily
+        # limit won't clear in seconds, so it's better to move to the fallback model.
+        _client = groq.Groq(api_key=config.groq_api_key(), max_retries=2)
     return _client
 
 
@@ -126,28 +127,60 @@ def build_system_prompt(db: Session, user: User) -> str:
     return prompt
 
 
+def _models() -> list[str]:
+    primary = config.groq_model()
+    fallback = config.GROQ_FALLBACK_MODEL
+    return [primary, fallback] if fallback and fallback != primary else [primary]
+
+
 def _call_model(messages: list[dict], allow_tools: bool = True):
-    """Call Groq, retrying once if the model produced a malformed tool call."""
-    kwargs = dict(
-        model=config.groq_model(),
-        messages=messages,
-        tools=tool_schemas(safety_on()),
-        tool_choice="auto" if allow_tools else "none",
-        temperature=0.3,
-    )
-    if config.REASONING_EFFORT:
-        kwargs["reasoning_effort"] = config.REASONING_EFFORT
-    for attempt in range(2):
-        try:
-            return _get_client().chat.completions.create(**kwargs)
-        except groq.BadRequestError as exc:
-            if "tool_use_failed" in str(exc) and attempt == 0:
-                continue
-            raise AgentError(f"Model request failed: {exc}") from exc
-        except groq.APIError as exc:
-            # Wrong model name, bad key, rate limit, network: fail loudly, but don't crash the app.
-            raise AgentError(f"Groq error: {exc}") from exc
+    """Call Groq.
+
+    - Retries once if Groq couldn't parse the model's output or tool call.
+    - If the main model is rate limited, tries the fallback model (if set).
+      run_turn notices and tells the user; nothing switches silently.
+    """
+    models = _models()
+    for model in models:
+        kwargs = dict(
+            model=model,
+            messages=messages,
+            tools=tool_schemas(safety_on()),
+            tool_choice="auto" if allow_tools else "none",
+            temperature=0.3,
+        )
+        # Only gpt-oss accepts low/medium/high; other models (e.g. a Qwen fallback) may reject it.
+        if config.REASONING_EFFORT and model.startswith("openai/gpt-oss"):
+            kwargs["reasoning_effort"] = config.REASONING_EFFORT
+        for attempt in range(2):
+            try:
+                return _get_client().chat.completions.create(**kwargs)
+            except groq.BadRequestError as exc:
+                # Groq couldn't parse the model's output (eval runs 1 and 3). One retry
+                # usually works because the model writes it differently the second time.
+                retryable = "tool_use_failed" in str(exc) or "output_parse_failed" in str(exc)
+                if retryable and attempt == 0:
+                    log.warning("model output rejected (%s), retrying once", model)
+                    continue
+                raise AgentError(f"Model request failed: {exc}") from exc
+            except groq.RateLimitError as exc:
+                if model != models[-1]:
+                    log.warning("model %s rate limited, trying fallback %s", model, models[-1])
+                    break
+                raise AgentError(f"Groq error: {exc}") from exc
+            except groq.APIError as exc:
+                # Wrong model name, bad key, network: fail loudly, but don't crash the app.
+                raise AgentError(f"Groq error: {exc}") from exc
     raise AgentError("Model request failed twice")
+
+
+FALLBACK_EVENT = "Backup model answered: the main model has reached its usage limit"
+
+
+def _note_fallback(response, result: TurnResult) -> None:
+    served_by = getattr(response, "model", None)
+    if served_by and served_by != config.groq_model() and FALLBACK_EVENT not in result.safety_events:
+        result.safety_events.append(FALLBACK_EVENT)
 
 
 def _allergy_safety_net(db: Session, user: User, message: str, result: TurnResult) -> None:
@@ -162,6 +195,34 @@ def _allergy_safety_net(db: Session, user: User, message: str, result: TurnResul
             "name": "safety_net",
             "arguments": json.dumps({"allergy": code}),
             "output": json.dumps({"saved": {"kind": "allergy", "value": code}}),
+        })
+        log.info("user=%s %s", user.id, event)
+
+    diet = safety.detect_diet(message)
+    if diet:
+        active = {(p.kind.value, p.value) for p in memory.active_preferences(db, user.id)}
+        if ("diet", diet) not in active:
+            memory.save_preference(db, user.id, "diet", diet, source_text=message)
+            event = f"Safety net saved diet: {diet}"
+            result.safety_events.append(event)
+            result.tool_calls.append({
+                "name": "safety_net",
+                "arguments": json.dumps({"diet": diet}),
+                "output": json.dumps({"saved": {"kind": "diet", "value": diet}}),
+            })
+            log.info("user=%s %s", user.id, event)
+
+    for word in safety.detect_dislikes(message):
+        active = {(p.kind.value, p.value) for p in memory.active_preferences(db, user.id)}
+        if ("dislike", word) in active:
+            continue
+        memory.save_preference(db, user.id, "dislike", word, source_text=message)
+        event = f"Safety net saved dislike: {word}"
+        result.safety_events.append(event)
+        result.tool_calls.append({
+            "name": "safety_net",
+            "arguments": json.dumps({"dislike": word}),
+            "output": json.dumps({"saved": {"kind": "dislike", "value": word}}),
         })
         log.info("user=%s %s", user.id, event)
 
@@ -206,6 +267,7 @@ def run_turn(db: Session, user: User, history: list[dict], user_message: str) ->
         system_prompt = build_system_prompt(db, user)
         messages = [{"role": "system", "content": system_prompt}, *history]
         response = _call_model(messages)
+        _note_fallback(response, result)
         msg = response.choices[0].message
 
         if not msg.tool_calls:

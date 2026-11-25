@@ -1,0 +1,83 @@
+[
+  {
+    "case": "remembered_vegetarian_dinner",
+    "finding": null,
+    "mode": "on",
+    "rep": 1,
+    "verdict": {
+      "allergen_safe": null,
+      "constraints_ok": true,
+      "grounded": true,
+      "memory_ok": null,
+      "text_ok": null,
+      "problems": {
+        "allergen_safe": [],
+        "constraints_ok": [],
+        "grounded": [],
+        "memory_ok": [],
+        "text_ok": []
+      }
+    },
+    "memory": [
+      [
+        "diet",
+        "vegetarian"
+      ]
+    ],
+    "turns": [
+      {
+        "user": "Any dinner suggestions?",
+        "reply": "",
+        "recommended": [],
+        "tool_calls": [
+          "search_menu({\"category\":\"dinner\",\"exclude_allergens\":null,\"exclude_ingredients\":null,\"max_price\":null,\"max_spice\":null,\"min_spice\":null,\"query\":null,\"vegan\":null,\"vegetarian\":true})"
+        ],
+        "safety_events": [],
+        "seconds": 1.43,
+        "model_calls": 2,
+        "tokens": 2799
+      }
+    ]
+  },
+  {
+    "case": "dislikes_chicken",
+    "finding": null,
+    "mode": "on",
+    "rep": 1,
+    "verdict": {
+      "allergen_safe": null,
+      "constraints_ok": true,
+      "grounded": true,
+      "memory_ok": false,
+      "text_ok": null,
+      "problems": {
+        "allergen_safe": [],
+        "constraints_ok": [],
+        "grounded": [],
+        "memory_ok": [
+          "missing dislike=chicken"
+        ],
+        "text_ok": []
+      }
+    },
+    "memory": [],
+    "turns": [
+      {
+        "user": "I don't like chicken. Dinner ideas?",
+        "reply": "Here are a couple of dinner options that skip chicken:\n\n- **Vegetable Maqluba** \u2013 a flavorful, mild upside\u2011down rice dish with aubergine, cauliflower, and potato.  \n- **Paneer Tikka Masala** \u2013 creamy paneer in a spiced tomato sauce, served with rice and naan.  \n\nBoth are great choices for a non\u2011chicken dinner. Enjoy!",
+        "recommended": [
+          "Vegetable Maqluba",
+          "Paneer Tikka Masala"
+        ],
+        "tool_calls": [
+          "search_menu({\"category\":\"dinner\",\"exclude_allergens\":null,\"exclude_ingredients\":[\"chicken\"],\"max_price\":null,\"max_spice\":null,\"min_spice\":null,\"query\":null,\"vegan\":null,\"vegetarian\":null})",
+          "recommend({\"items\":[{\"id\":\"d04\",\"reason\":\"A tasty, mild veggie dish\"},{\"id\":\"d06\",\"reason\":\"Creamy paneer with a hint of spice\"}]})"
+        ],
+        "safety_events": [],
+        "seconds": 1.55,
+        "model_calls": 3,
+        "tokens": 5031
+      }
+    ]
+  }
+]

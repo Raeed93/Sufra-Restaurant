@@ -3,9 +3,9 @@
 Three checks, each fixing a failure found while testing the baseline
 (see docs/findings.md):
 
-1. allergy_safety_net   The user mentions an allergy but the model forgets to
-                        save it (finding 1). Code spots allergy words and saves
-                        the allergen codes itself.
+1. safety net           The user mentions an allergy, diet or disliked
+                        ingredient but the model forgets to save it (finding 1,
+                        eval runs 1 and 3). Code spots the words and saves them.
 2. check_item           The model recommends something unsafe (finding 2).
                         Every recommendation is checked against the user's
                         allergies, diet and budget before it is shown.
@@ -85,6 +85,58 @@ def detect_allergies(message: str) -> list[str]:
     return found
 
 
+_DIET = [
+    (re.compile(r"\bi(?:'m| am)\s+(?:a\s+|now\s+|fully\s+)?vegan\b", re.I), "vegan"),
+    (re.compile(r"\bi(?:'m| am)\s+(?:a\s+|now\s+)?vegetarian\b", re.I), "vegetarian"),
+    (re.compile(r"\bi (?:don'?t|do not|never) eat (?:any )?meat\b", re.I), "vegetarian"),
+]
+
+
+def detect_diet(message: str) -> str | None:
+    """'vegan' or 'vegetarian' if the user says that about themselves, else None."""
+    if _THIRD_PARTY.search(message) or re.search(r"\b(not|no longer|anymore|used to)\b", message, re.I):
+        return None
+    for pattern, diet in _DIET:
+        if pattern.search(message):
+            return diet
+    return None
+
+
+_DISLIKE = re.compile(
+    r"\bi\s+(?:really\s+)?(?:(?:don'?t|do not)\s+(?:like|eat|enjoy|want)|hate|dislike|can'?t stand)\s+"
+    r"([a-z]+)",
+    re.I,
+)
+
+
+def _ingredient_words() -> set[str]:
+    words = set()
+    for item in menu.all_items():
+        for ingredient in item["ingredients"]:
+            words.update(ingredient.lower().split())
+    return words
+
+
+def detect_dislikes(message: str) -> list[str]:
+    """Ingredients the user says they dislike, e.g. "I don't like chicken" -> ["chicken"].
+
+    Only words that are real ingredients on the menu are saved, so the memory
+    holds things the search can actually exclude. "I don't like very spicy
+    food" saves nothing here (spice is a separate preference).
+    """
+    if _THIRD_PARTY.search(message):
+        return []
+    known = _ingredient_words()
+    found = []
+    for match in _DISLIKE.finditer(message):
+        word = match.group(1).lower()
+        for candidate in (word, word.rstrip("s")):
+            if candidate in known and candidate not in found:
+                found.append(candidate)
+                break
+    return found
+
+
 # ---------- 2. Recommendation check ----------
 
 def check_item(item: dict, prefs: list[Preference]) -> list[str]:
@@ -138,7 +190,7 @@ def dish_mentions(text: str) -> list[dict]:
         span = m.group(1)
         after = text[m.end(): m.end() + 20]
         price_match = _PRICE.search(span) or _PRICE.match(after.lstrip(" –—-:(|"))
-        name = _PRICE.sub("", span).strip(" –—-:(|,.")
+        name = re.sub(r"\(.*?\)", "", _PRICE.sub("", span)).strip(" –—-:(|,.")
         key = _normalise(name)
         if not key:
             continue

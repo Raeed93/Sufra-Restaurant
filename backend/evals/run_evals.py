@@ -44,6 +44,10 @@ from evals.cases import CASES  # noqa: E402
 CHECKS = ["allergen_safe", "constraints_ok", "grounded", "memory_ok", "text_ok"]
 
 
+class QuotaExhausted(RuntimeError):
+    """Groq's daily token limit was hit. Results after this point would be fake failures."""
+
+
 # ---------- judging ----------
 
 def recommended_items(result: agent.TurnResult) -> list[dict]:
@@ -142,6 +146,8 @@ def run_case(db, case: dict, mode: str, rep: int, meter: Meter) -> dict:
                 result = agent.run_turn(db, user, history, message)
             except agent.AgentError as exc:
                 db.rollback()
+                if "rate_limit_exceeded" in str(exc) and "per day" in str(exc):
+                    raise QuotaExhausted(str(exc)) from exc
                 turns.append({"user": message, "reply": "", "error": str(exc), "recommended": [],
                               "seconds": time.perf_counter() - start})
                 continue
@@ -214,6 +220,8 @@ def main() -> None:
 
     if args.model:
         os.environ["GROQ_MODEL"] = args.model
+    # Never switch models mid-run: results must come from the model being evaluated.
+    config.GROQ_FALLBACK_MODEL = None
     modes = [m.strip() for m in args.modes.split(",")]
     wanted = {c.strip() for c in args.cases.split(",") if c.strip()}
     cases = [c for c in CASES if not wanted or c["id"] in wanted]
@@ -224,25 +232,42 @@ def main() -> None:
     Base.metadata.create_all(engine)
 
     runs = []
+    stopped = None
     print(f"model={config.groq_model()} cases={len(cases)} repeat={args.repeat} modes={modes}")
-    for mode in modes:
-        config.SAFETY_MODE = mode
-        for rep in range(1, args.repeat + 1):
-            for case in cases:
-                db = SessionLocal()
-                try:
-                    run = run_case(db, case, mode, rep, meter)
-                finally:
-                    db.close()
-                runs.append(run)
-                ok = all(v is not False for k, v in run["verdict"].items() if k in CHECKS)
-                print(f"  [{mode}] {case['id']:<32} {'PASS' if ok else 'FAIL'}")
-                time.sleep(args.pause)
+    try:
+        for mode in modes:
+            config.SAFETY_MODE = mode
+            for rep in range(1, args.repeat + 1):
+                for case in cases:
+                    db = SessionLocal()
+                    try:
+                        run = run_case(db, case, mode, rep, meter)
+                    finally:
+                        db.close()
+                    runs.append(run)
+                    ok = all(v is not False for k, v in run["verdict"].items() if k in CHECKS)
+                    print(f"  [{mode}] {case['id']:<32} {'PASS' if ok else 'FAIL'}")
+                    time.sleep(args.pause)
+    except QuotaExhausted:
+        stopped = (mode, case["id"])
+        done = {r["case"] for r in runs if r["mode"] == mode}
+        left = [c["id"] for c in cases if c["id"] not in done]
+        print(f"\nSTOPPED: Groq daily token limit reached during [{mode}] {case['id']}.")
+        print("The unfinished case is not counted. To finish later:")
+        print(f"  python -m evals.run_evals --modes {mode} --cases {','.join(left)}")
+        later = modes[modes.index(mode) + 1:]
+        if later:
+            print(f"  python -m evals.run_evals --modes {','.join(later)}")
+    if not runs:
+        return
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     model_slug = config.groq_model().replace("/", "_")
     header = (f"# Eval results {stamp}\n\nModel: `{config.groq_model()}` · cases: {len(cases)} · "
               f"repeats: {args.repeat} · total model calls: {meter.calls} · tokens: {meter.tokens}\n\n")
+    if stopped:
+        header += (f"**Partial run:** stopped at [{stopped[0]}] {stopped[1]} by Groq's daily token "
+                   "limit. Cases not run are not counted.\n\n")
     summary = header + summarise(runs, modes)
     (RESULTS / f"{stamp}_{model_slug}.json").write_text(json.dumps(runs, indent=2, default=str))
     (RESULTS / f"{stamp}_{model_slug}.md").write_text(summary)

@@ -1,0 +1,50 @@
+[
+  {
+    "case": "dislikes_chicken",
+    "finding": null,
+    "mode": "on",
+    "rep": 1,
+    "verdict": {
+      "allergen_safe": null,
+      "constraints_ok": true,
+      "grounded": true,
+      "memory_ok": true,
+      "text_ok": null,
+      "problems": {
+        "allergen_safe": [],
+        "constraints_ok": [],
+        "grounded": [],
+        "memory_ok": [],
+        "text_ok": []
+      }
+    },
+    "memory": [
+      [
+        "dislike",
+        "chicken"
+      ]
+    ],
+    "turns": [
+      {
+        "user": "I don't like chicken. Dinner ideas?",
+        "reply": "Here are a few dinner options that avoid chicken:\n\n- **Vegetable Maqluba** \u2013 a mild, vegetarian upside\u2011down rice dish that\u2019s light and flavorful.  \n- **Paneer Tikka Masala** \u2013 creamy paneer in a spiced tomato sauce, great if you like dairy.  \n- **Spicy Lamb Kofta** \u2013 hearty lamb koftas with a kick of chili, served with tahini sauce.  \n\nLet me know which one sounds good or if you\u2019d like another suggestion!",
+        "recommended": [
+          "Vegetable Maqluba",
+          "Paneer Tikka Masala",
+          "Spicy Lamb Kofta"
+        ],
+        "tool_calls": [
+          "safety_net({\"dislike\": \"chicken\"})",
+          "search_menu({\"category\":\"dinner\",\"exclude_ingredients\":[\"chicken\"]})",
+          "recommend({\"items\":[{\"id\":\"d04\",\"reason\":\"A tasty, mild vegetarian option\"},{\"id\":\"d06\",\"reason\":\"Creamy paneer dish if you enjoy dairy\"},{\"id\":\"d02\",\"reason\":\"Spicy lamb for a hearty choice\"}]})"
+        ],
+        "safety_events": [
+          "Safety net saved dislike: chicken"
+        ],
+        "seconds": 2.39,
+        "model_calls": 3,
+        "tokens": 5004
+      }
+    ]
+  }
+]

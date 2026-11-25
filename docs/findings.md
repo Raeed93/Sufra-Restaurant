@@ -34,3 +34,9 @@
 - Cause: the chat history still had "I'm allergic to nuts"; the model followed that over memory.
 - Fix: system prompt lists recently removed preferences and says memory overrides chat history.
 - Note for Part 2: one click removes a safety rule. Consider confirming before removing an allergy.
+
+## 9. Dislike applied but never remembered (eval run 3)
+- "I don't like chicken": the model excluded chicken from the search but didn't save it, in both modes.
+- Fix: safety net saves disliked ingredients, only if the word is a real menu ingredient
+  (so "very spicy food" isn't saved as a dislike).
+- Also from run 3: output_parse_failed crash now retried once.
