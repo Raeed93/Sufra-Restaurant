@@ -5,10 +5,23 @@ export type User = { id: number; username: string };
 export type Preference = { id: number; kind: string; value: string };
 export type ToolCall = { name: string; arguments: string; output: string };
 export type Conversation = { id: number; title: string | null; created_at: string };
+export type Recommendation = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  vegetarian: boolean;
+  vegan: boolean;
+  spice_level: number;
+  allergens: string[];
+  reason: string;
+};
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   toolCalls?: ToolCall[];
+  recommendations?: Recommendation[];
+  safetyEvents?: string[];
 };
 
 export class ApiError extends Error {
@@ -57,11 +70,16 @@ export const api = {
   forget: (id: number) => request<void>("DELETE", `/me/preferences/${id}`),
   conversations: () => request<Conversation[]>("GET", "/conversations"),
   messages: (id: number) =>
-    request<{ role: "user" | "assistant"; content: string }[]>("GET", `/conversations/${id}/messages`),
+    request<{ role: "user" | "assistant"; content: string; recommendations: Recommendation[] }[]>(
+      "GET",
+      `/conversations/${id}/messages`,
+    ),
   chat: (message: string, conversationId: number | null) =>
     request<{
       conversation_id: number;
       reply: string;
+      recommendations: Recommendation[];
+      safety_events: string[];
       tool_calls: ToolCall[];
       preferences: Preference[];
     }>("POST", "/chat", { message, conversation_id: conversationId }),

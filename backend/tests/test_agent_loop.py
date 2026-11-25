@@ -1,7 +1,7 @@
 """Tests the agent loop with a fake model, so no Groq key is needed."""
 from types import SimpleNamespace as NS
 
-from app import agent, memory
+from app import agent, config, memory
 
 
 def _tool_call(call_id, name, args):
@@ -13,6 +13,8 @@ def _response(content=None, tool_calls=None):
 
 
 def test_loop_runs_tools_then_replies(db, monkeypatch):
+    """The Part 1 baseline loop, with the safety layer off."""
+    monkeypatch.setattr(config, "SAFETY_MODE", "off")
     user, _ = memory.get_or_create_user(db, "raed")
     scripted = iter([
         _response(tool_calls=[

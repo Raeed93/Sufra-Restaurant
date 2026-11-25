@@ -6,16 +6,20 @@ One origin means no CORS setup and the login cookie just works.
 
 Run locally:  uvicorn app.main:app --reload --port 8000
 """
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from app import auth, conversations, memory, schemas
+from app import auth, config, conversations, memory, schemas
 from app.agent import AgentError, run_turn
 from app.config import groq_model, jwt_secret
 from app.db import get_db, init_db
 from app.models import User
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 @asynccontextmanager
@@ -39,7 +43,7 @@ def _prefs_out(db: Session, user_id: int) -> list[schemas.PreferenceOut]:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "safety_mode": config.SAFETY_MODE}
 
 
 # ---------- auth ----------
@@ -133,6 +137,8 @@ def chat(body: schemas.ChatIn, user: User = Depends(auth.current_user), db: Sess
     return schemas.ChatOut(
         conversation_id=conv.id,
         reply=result.reply,
+        recommendations=[schemas.RecommendationOut(**r) for r in result.recommendations],
+        safety_events=result.safety_events,
         tool_calls=[schemas.ToolCallOut(**c) for c in result.tool_calls],
         preferences=_prefs_out(db, user.id),
     )

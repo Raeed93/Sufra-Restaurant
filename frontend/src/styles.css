@@ -173,6 +173,23 @@ button { cursor: pointer; }
   border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) 4px;
 }
 
+/* Dish cards: names and prices come from the menu, not the model */
+.msg .dishes { list-style: none; padding: 0; margin: 0.9rem 0 0; display: grid; gap: 10px; }
+.dish {
+  border: 1px solid var(--line); border-inline-start: 4px solid var(--cardamom);
+  border-radius: var(--radius-sm); padding: 0.7rem 0.9rem; background: var(--paper);
+}
+.dish-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.dish-name { font-weight: 500; }
+.dish-price { font-weight: 500; color: var(--cardamom); white-space: nowrap; }
+.msg .dish-reason { margin: 0.25rem 0 0.4rem; }
+.msg .dish-facts { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.84rem; color: var(--ink-soft); }
+.msg .safety-events {
+  list-style: none; margin: 0.8rem 0 0; padding: 0; display: grid; gap: 0.3rem; font-size: 0.85rem;
+}
+.safety-events li { margin: 0; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); background: var(--saffron-soft); }
+.safety-events li.alert { background: var(--sadu-soft); color: #6d1f1b; }
+
 .checks { margin-top: 0.8rem; border-top: 1px dashed var(--line); padding-top: 0.6rem; font-size: 0.86rem; color: var(--ink-soft); }
 .checks summary { cursor: pointer; }
 .checks ul { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid; gap: 0.5rem; }

@@ -31,8 +31,8 @@ def active_preferences(db: Session, user_id: int) -> list[Preference]:
     return list(db.scalars(stmt))
 
 
-# A user has only one spice level and one budget at a time. 
-# Saving a new one replaces the old one 
+# A user has only one spice level and one budget at a time. Saving a new one
+# replaces the old one in code, instead of trusting the model to call update.
 SINGLE_VALUE_KINDS = {PreferenceKind.spice, PreferenceKind.budget}
 
 
@@ -106,12 +106,6 @@ def remove_preference(db: Session, user_id: int, preference_id: int) -> Preferen
     return pref
 
 
-def format_for_prompt(prefs: list[Preference]) -> str:
-    """Render active preferences as lines the model can read and refer to by id."""
-    if not prefs:
-        return "(nothing remembered yet)"
-    return "\n".join(f"- [id={p.id}] {p.kind.value}: {p.value}" for p in prefs)
-
 def recently_removed(db: Session, user_id: int, limit: int = 10) -> list[Preference]:
     """Preferences the user removed (not replaced) and hasn't re-added since.
 
@@ -137,6 +131,13 @@ def recently_removed(db: Session, user_id: int, limit: int = 10) -> list[Prefere
             seen.add(key)
             out.append(p)
     return out
+
+
+def format_for_prompt(prefs: list[Preference]) -> str:
+    """Render active preferences as lines the model can read and refer to by id."""
+    if not prefs:
+        return "(nothing remembered yet)"
+    return "\n".join(f"- [id={p.id}] {p.kind.value}: {p.value}" for p in prefs)
 
 
 def format_removed(prefs: list[Preference]) -> str:

@@ -51,3 +51,8 @@ JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "168"))  # 7 days
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 # Only the most recent messages of a conversation are sent to the model.
 MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "40"))
+
+# --- Safety layer (Part 2) ---
+# "on":  recommend tool + code checks (allergy net, item checks, reply check).
+# "off": the Part 1 baseline, model-only. Kept so the evals can compare both.
+SAFETY_MODE = os.getenv("SAFETY_MODE", "on").lower()

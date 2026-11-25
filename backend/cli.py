@@ -20,7 +20,7 @@ from app.db import SessionLocal, init_db
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--user", required=True, help="username to chat as")
-    parser.add_argument("--debug", action="store_true", help="print tool calls")
+    parser.add_argument("--debug", action="store_true", help="print tool calls and timing")
     args = parser.parse_args()
 
     init_db()

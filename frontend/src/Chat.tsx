@@ -6,6 +6,7 @@ import {
   type ChatMessage,
   type Conversation,
   type Preference,
+  type Recommendation,
   type ToolCall,
   type User,
 } from "./api";
@@ -34,6 +35,31 @@ const KIND_LABELS: Record<string, string> = {
 };
 const KIND_ORDER = Object.keys(KIND_LABELS);
 const SPICE_WORDS = ["No spice", "Mild", "Medium", "Hot"];
+
+const ALLERGEN_LABELS: Record<string, string> = { tree_nuts: "tree nuts" };
+
+function DishCard({ r }: { r: Recommendation }) {
+  const diet = r.vegan ? "Vegan" : r.vegetarian ? "Vegetarian" : null;
+  return (
+    <li className="dish">
+      <div className="dish-head">
+        <span className="dish-name">{r.name}</span>
+        <span className="dish-price">{r.price} SAR</span>
+      </div>
+      <p className="dish-reason">{r.reason}</p>
+      <p className="dish-facts">
+        <span>{r.category[0].toUpperCase() + r.category.slice(1)}</span>
+        <span>{SPICE_WORDS[r.spice_level] ?? `Spice ${r.spice_level}`}</span>
+        {diet && <span>{diet}</span>}
+        <span>
+          {r.allergens.length
+            ? `Contains ${r.allergens.map((a) => ALLERGEN_LABELS[a] ?? a).join(", ")}`
+            : "No listed allergens"}
+        </span>
+      </p>
+    </li>
+  );
+}
 
 function prettyValue(p: Preference): string {
   if (p.kind === "allergy") return p.value.replace("_", " ");
@@ -66,6 +92,14 @@ function describeCall(call: ToolCall): string {
     if (args.max_price !== undefined) parts.push(`up to ${args.max_price} SAR`);
     const filters = parts.length ? parts.join(", ") : "whole menu";
     return `Searched the menu (${filters}) and found ${out.count ?? 0}`;
+  }
+  if (call.name === "safety_net") return `Safety net remembered allergy: ${String(args.allergy).replace("_", " ")}`;
+  if (call.name === "recommend") {
+    const accepted = (out.accepted as { name: string }[] | undefined) ?? [];
+    const rejected = (out.rejected as { name?: string; id: string }[] | undefined) ?? [];
+    const parts = [`Recommended ${accepted.map((a) => a.name).join(", ") || "nothing"}`];
+    if (rejected.length) parts.push(`blocked ${rejected.map((r) => r.name ?? r.id).join(", ")}`);
+    return parts.join("; ");
   }
   const pref = (out.saved ?? out.updated ?? out.removed) as Preference | undefined;
   const label = (p: Preference) => `${p.kind === "spice" ? "spice level" : p.kind}: ${prettyValue(p)}`;
@@ -123,7 +157,16 @@ export default function Chat({ user, prefs, setPrefs, onLogout }: Props) {
     setSending(true);
     try {
       const res = await api.chat(message, activeId);
-      setMessages((m) => [...m, { role: "assistant", content: res.reply, toolCalls: res.tool_calls }]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: res.reply,
+          toolCalls: res.tool_calls,
+          recommendations: res.recommendations,
+          safetyEvents: res.safety_events,
+        },
+      ]);
       setPrefs(res.preferences);
       if (activeId === null) {
         setActiveId(res.conversation_id);
@@ -224,6 +267,22 @@ export default function Chat({ user, prefs, setPrefs, onLogout }: Props) {
           {messages.map((m, i) => (
             <article key={i} className={`msg msg-${m.role}`}>
               {m.role === "assistant" ? <Markdown>{m.content}</Markdown> : <p>{m.content}</p>}
+              {m.recommendations && m.recommendations.length > 0 && (
+                <ul className="dishes">
+                  {m.recommendations.map((r) => (
+                    <DishCard key={r.id} r={r} />
+                  ))}
+                </ul>
+              )}
+              {m.safetyEvents && m.safetyEvents.length > 0 && (
+                <ul className="safety-events" aria-label="Safety checks">
+                  {m.safetyEvents.map((e, j) => (
+                    <li key={j} className={e.startsWith("Safety net") ? undefined : "alert"}>
+                      {e}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {m.toolCalls && m.toolCalls.length > 0 && (
                 <details className="checks">
                   <summary>
@@ -317,7 +376,10 @@ export default function Chat({ user, prefs, setPrefs, onLogout }: Props) {
             </section>
           ))
         )}
-        <p className="memory-note">To change something, say so in the chat or remove it here.</p>
+        <p className="memory-note">
+          Every recommendation is checked against your allergies, diet and budget before it's shown. To change
+          something, say so in the chat or remove it here.
+        </p>
       </aside>
     </div>
   );

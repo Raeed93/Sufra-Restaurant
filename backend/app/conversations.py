@@ -1,9 +1,12 @@
 """Storing and loading chat threads. Every query is scoped by user_id."""
+import json
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import config
+from app import config, menu
 from app.models import Conversation, Message
+from app.tools import recommendation_card
 
 
 def create(db: Session, user_id: int, first_message: str) -> Conversation:
@@ -54,10 +57,41 @@ def append(db: Session, conv: Conversation, new_messages: list[dict]) -> None:
 
 
 def visible_messages(conv: Conversation) -> list[dict]:
-    """What the chat UI shows: user messages and final assistant replies only."""
+    """What the chat UI shows: user messages and final replies, with their dish cards.
+
+    Cards aren't stored separately: they're rebuilt from the recommend tool calls
+    in the history, using menu.json for names and prices.
+    """
     out = []
+    reasons: dict[str, dict[str, str]] = {}   # tool_call_id -> {item_id: reason}
+    cards: list[dict] = []
     for m in conv.messages:
-        if m.role == "user" or (m.role == "assistant" and not m.data.get("tool_calls")):
-            out.append({"role": m.role, "content": m.data.get("content", ""),
-                        "created_at": m.created_at.isoformat()})
+        d = m.data
+        if m.role == "user":
+            cards = []
+            out.append({"role": "user", "content": d.get("content", ""),
+                        "created_at": m.created_at.isoformat(), "recommendations": []})
+        elif m.role == "assistant" and d.get("tool_calls"):
+            for call in d["tool_calls"]:
+                if call["function"]["name"] == "recommend":
+                    try:
+                        args = json.loads(call["function"]["arguments"] or "{}")
+                        reasons[call["id"]] = {str(i.get("id")): str(i.get("reason", ""))
+                                               for i in args.get("items", [])}
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
+        elif m.role == "tool" and d.get("tool_call_id") in reasons:
+            try:
+                accepted = json.loads(d.get("content") or "{}").get("accepted", [])
+            except json.JSONDecodeError:
+                accepted = []
+            for a in accepted:
+                item = menu.get_item(a.get("id", ""))
+                if item:
+                    cards = [c for c in cards if c["id"] != item["id"]]
+                    cards.append(recommendation_card(item, reasons[d["tool_call_id"]].get(item["id"], "")))
+        elif m.role == "assistant":
+            out.append({"role": "assistant", "content": d.get("content", ""),
+                        "created_at": m.created_at.isoformat(), "recommendations": cards})
+            cards = []
     return out

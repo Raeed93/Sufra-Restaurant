@@ -38,9 +38,24 @@ class ToolCallOut(BaseModel):
     output: str
 
 
+class RecommendationOut(BaseModel):
+    id: str
+    name: str
+    category: str
+    price: float
+    vegetarian: bool
+    vegan: bool
+    spice_level: int
+    allergens: list[str]
+    reason: str
+
+
 class ChatOut(BaseModel):
     conversation_id: int
     reply: str
+    recommendations: list[RecommendationOut]
+    # Plain-language log of what the safety layer did this turn.
+    safety_events: list[str]
     # Shown in the UI's "under the hood" panel: useful for the demo and for debugging.
     tool_calls: list[ToolCallOut]
     preferences: list[PreferenceOut]
@@ -56,3 +71,4 @@ class MessageOut(BaseModel):
     role: str
     content: str
     created_at: str
+    recommendations: list[RecommendationOut] = []

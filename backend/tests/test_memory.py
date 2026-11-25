@@ -50,6 +50,7 @@ def test_users_are_isolated(db):
         memory.remove_preference(db, bob.id, pref.id)
     assert len(memory.active_preferences(db, alice.id)) == 1
 
+
 def test_saving_second_spice_replaces_the_first(db):
     user, _ = memory.get_or_create_user(db, "a")
     memory.save_preference(db, user.id, "spice", "1")
@@ -64,7 +65,8 @@ def test_allergy_must_be_a_known_allergen(db):
         memory.save_preference(db, user.id, "allergy", "nuts")
     memory.save_preference(db, user.id, "allergy", "peanuts")
     memory.save_preference(db, user.id, "allergy", "tree_nuts")
-    assert len(memory.active_preferences(db, user.id)) == 2 
+    assert len(memory.active_preferences(db, user.id)) == 2   # allergies are multi-value
+
 
 def test_unknown_kind_is_rejected(db):
     user, _ = memory.get_or_create_user(db, "a")
@@ -79,6 +81,8 @@ def test_tool_errors_go_back_to_the_model(db):
     assert "error" in out
     out = json.loads(run_tool(ctx, "search_menu", '{"category": "snacks", "vegan": true}'))
     assert out["count"] > 0 and all(i["vegan"] for i in out["items"])
+
+
 def test_recently_removed_lists_deleted_but_not_replaced_or_readded(db):
     user, _ = memory.get_or_create_user(db, "a")
     nuts = memory.save_preference(db, user.id, "allergy", "tree_nuts")
