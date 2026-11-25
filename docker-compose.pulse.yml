@@ -1,0 +1,15 @@
+# Server-specific: joins Sufra's web container to PulseMD's Docker network so the
+# existing nginx (pulse-nginx-1) can reach it as http://sufra-web:80.
+# Use together with docker-compose.prod.yml:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.pulse.yml ...
+services:
+  web:
+    networks:
+      default: {}
+      pulse:
+        aliases: [sufra-web]
+
+networks:
+  pulse:
+    name: pulse_pulse-network
+    external: true
